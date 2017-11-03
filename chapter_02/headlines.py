@@ -2,8 +2,11 @@
 # coding=utf-8
 
 import feedparser
-import sys
 from flask import Flask, render_template, request
+import json
+import sys
+import urllib
+import urllib2
 
 
 reload(sys)
@@ -29,7 +32,28 @@ def get_news():
     else:
         publication = query.lower()
     feed = feedparser.parse(RSS_FEEDS[publication])
-    return render_template('home.html', publication_name=publication.upper(), articles=feed['entries'])
+    weather = getWeather("83687")
+    return render_template('home.html',
+                           publication_name=publication.upper(),
+                           articles=feed['entries'],
+                           weather=weather)
+
+
+def getWeather(query):
+    api_url = """http://www.myweather2.com/developer/forecast.ashx?uac=CYiakGRSz-&temp_unit=f&output=json&query={0}"""
+    query = urllib.quote(query)
+    url = api_url.format(query)
+    data = urllib2.urlopen(url).read()
+    parsed = json.loads(data)
+    weather = None
+
+    if parsed.get('weather') and parsed.get('weather').get('curren_weather'):
+        current = parsed.get('weather').get('curren_weather')
+        weather = {'description': current[0]['weather_text'],
+                   'temperature': current[0]['temp'],
+                   'zip': query}
+
+    return weather
 
 
 if __name__ == "__main__":
